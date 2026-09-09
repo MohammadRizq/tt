@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>خريطة المخطط المعماري التفاعلية</title>
+  <style>
+    :root {
+      --bg-dark: #121417;
+      --panel-bg: #1c2024;
+      --accent-cyan: #74d2e8;
+      --accent-orange: #e59853;
+      --text-main: #f0f3f6;
+      --text-muted: #9ba1a6;
+      --border-color: #2b3036;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* لوحة التحكم الجانبية */
+    .sidebar {
+      width: 360px;
+      min-width: 320px;
+      background: var(--panel-bg);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      gap: 20px;
+      z-index: 20;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .sidebar h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px;
+      background: #121417;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .search-box input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .selected-info {
+      background: #16191d;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .info-badge {
+      display: inline-block;
+      align-self: flex-start;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border-radius: 20px;
+      text-transform: uppercase;
+      background: rgba(116, 210, 232, 0.15);
+      color: var(--accent-cyan);
+    }
+
+    .info-detail {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #23272c;
+      padding-bottom: 6px;
+    }
+
+    .info-detail span:last-child {
+      color: #fff;
+      font-weight: 500;
+    }
+
+    /* منطقة عرض الخريطة */
+    .viewport {
+      flex: 1;
+      position: relative;
+      background-color: #0d0f12;
+      background-image: radial-gradient(#1f242b 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    .viewport:active {
+      cursor: grabbing;
+    }
+
+    #map-wrapper {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2292.5px;
+      height: 1055px;
+      transform-origin: 0 0;
+      transition: transform 0.05s ease-out;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* تخصيص التفاعل على الأشكال */
+    .unit-clickable {
+      cursor: pointer;
+      transition: opacity 0.15s ease, filter 0.15s ease;
+    }
+
+    .unit-clickable:hover {
+      filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.9));
+      opacity: 0.9;
+    }
+
+    .selected-active {
+      filter: drop-shadow(0 0 10px var(--accent-cyan)) !important;
+      stroke: #fff !important;
+      stroke-width: 3px !important;
+    }
+
+    /* أزرار التحكم بالتقريب */
+    .zoom-controls {
+      position: absolute;
+      bottom: 24px;
+      left: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 10;
+    }
+
+    .btn-ctrl {
+      width: 40px;
+      height: 40px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      transition: background 0.2s ease;
+    }
+
+    .btn-ctrl:hover {
+      background: #282e35;
+      color: var(--accent-cyan);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- مساحة الرسم التفاعلي -->
+  <div class="viewport" id="viewport">
+    <div id="map-wrapper">
+      <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 2292.5 1055">
+        <defs>
+          <style>
+            .cls-1,.cls-5{fill:none;}
+            .cls-2{opacity:0.31;}
+            .cls-3{clip-path:url(#clip-path);}
+            .cls-4{clip-path:url(#clip-path-2);}
+            .cls-5{stroke:#eaeaea;stroke-width:0.5px;}
+            .cls-18,.cls-21,.cls-22,.cls-5{stroke-miterlimit:10;}
+            .cls-6{clip-path:url(#clip-path-4);}
+            .cls-7{clip-path:url(#clip-path-5);}
+            .cls-22,.cls-8{fill:#999784;}
+            .cls-9{fill:#846a56;}
+            .cls-10{fill:#e59853;}
+            .cls-11{fill:#607d87;}
+            .cls-12,.cls-19{fill:#fff;}
+            .cls-13{fill:#859988;}
+            .cls-14{fill:#5e5a57;}
+            .cls-15,.cls-18{fill:#aaa392;}
+            .cls-16{fill:#7f7774;}
+            .cls-17{fill:#74d2e8;}
+            .cls-18,.cls-21{stroke:#7f7774;stroke-width:2px;}
+            .cls-19{opacity:0.46;}
+            .cls-20{fill:#bf9a7b;}
+            .cls-21{fill:#4e74d1;}
+            .cls-22{stroke:#e5e5e5;}
+            .cls-23{fill:#db9700;}
+            .cls-24{fill:#212121;}
+            .cls-25{font-size:12px;font-family:Impact;fill:#e5e5e5;}
+            .cls-26{opacity:0.35;}
+            .cls-27{fill:#bfbbb2;}
+            .cls-28{fill:#efe8e6;}
+            .cls-29{fill:url(#linear-gradient);}
+            .cls-30{opacity:0.28;}
+            .cls-31{fill:#e5e5e5;}
+            .cls-32{fill:url(#linear-gradient-2);}
+            .cls-33{fill:url(#linear-gradient-3);}
+            .cls-34{fill:#e56c1a;}
+            .cls-35{fill:#d1d3d4;}
+            .cls-36{fill:#333;}
+            .cls-37{fill:#ea8500;}
+            .cls-38{fill:#914f00;}
+            .cls-39{fill:#4c4c4c;}
+          </style>
+          <clipPath id="clip-path" transform="translate(-12 301)"><line class="cls-1" x1="288.5" y1="501.5" x2="209.77" y2="501.5"/></clipPath>
+          <clipPath id="clip-path-2" transform="translate(-12 301)"><rect class="cls-1" x="204.77" y="496.5" width="88.73" height="10"/></clipPath>
+          <clipPath id="clip-path-4" transform="translate(-12 301)"><line class="cls-1" x1="563.86" y1="501" x2="485.81" y2="501"/></clipPath>
+          <clipPath id="clip-path-5" transform="translate(-12 301)"><line class="cls-1" x1="839.89" y1="501" x2="761.69" y2="501"/></clipPath>
+          <linearGradient id="linear-gradient" x1="452.08" y1="211.42" x2="509.3" y2="154.2" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fbdb4f"/><stop offset="1" stop-color="#f7931e"/></linearGradient>
+          <linearGradient id="linear-gradient-2" x1="321.8" y1="217.7" x2="397.06" y2="142.44" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#00bfb7"/><stop offset="1" stop-color="#5f931e"/></linearGradient>
+          <linearGradient id="linear-gradient-3" x1="159.8" y1="217.7" x2="235.06" y2="142.44" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ff7100"/><stop offset="1" stop-color="#aa2f00"/></linearGradient>
+        </defs>
+
+        <g id="Layer_2" data-name="Layer 2">
+          <g class="cls-2">
+            <g class="cls-3">
+              <g class="cls-4">
+                <g class="cls-4">
+                  <image width="186" height="22" transform="translate(192.68 797.2) scale(0.48)" xlink:href="data:image/png;base64,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"/>
+                </g>
+              </g>
+            </g>
+            <line class="cls-5" x1="276.5" y1="802.5" x2="197.77" y2="802.5"/>
+          </g>
+          <g class="cls-2"><line class="cls-5" x1="551.86" y1="802" x2="473.81" y2="802"/></g>
+          <g class="cls-2"><line class="cls-5" x1="827.89" y1="802" x2="749.69" y2="802"/></g>
+          
+          <!-- المخطط الهيكلي الخارجي -->
+          <path class="cls-8 unit-clickable" data-id="main_corridor" data-name="الممر والبهو الرئيسي" data-type="ممرات (COR)" data-area="4,820 م²" data-status="شائع الاستخدام" d="M1702.5,300v59h-80v40h-40v40h-40v40h-40v40h-123V674.5L1333,628l-43.5,43.5L1248,630H1047V400.2l-9.64.05-19.68.05V400h29.14L1087,362l-40.21-38H13V87.5c.25-41.48,25-75,70.46-74.93h250V52H374V92h80V244.5h593V125h40V85h40V45h40V5h240.5C1538,5,1648.63,89.69,1687.56,207.09A294.45,294.45,0,0,1,1702.5,300Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-9 unit-clickable" data-id="str_101" data-name="درج الطوارئ الرئيسي" data-type="سلالم (STR)" data-area="128 م²" data-status="نشط" points="1215 546 1215 466 1235 466 1235 406 1375 406 1375 546 1215 546"/>
+          <polygon class="cls-10 unit-clickable" data-id="wc_east" data-name="دورة مياه الجناح الشرقي" data-type="مرافق (WC)" data-area="96 م²" data-status="متاح" points="1195 386 1215 366 1242 366 1242 306 1155 306 1155 346 1115 346 1115 386 1075 386 1075 426 1195 426 1195 386"/>
+          
+          <polygon class="cls-11 unit-clickable" data-id="off_east_wing_1" data-name="مكتب إدارة العمليات E1" data-type="مكاتب (OFF)" data-area="68 م²" data-status="مشغول" points="1215.25 545.75 1215.25 466.25 1274.75 466.25 1274.75 485.1 1296.69 507.04 1274.85 545.75 1215.25 545.75"/>
+          <path class="cls-12" d="M1286.5,165.5v18.71l.15.14,21.73,21.74-21.67,38.41H1227.5v-79h59m.5-.5h-60v80h60l22-39-22-22V165Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-11 unit-clickable" data-id="off_east_wing_2" data-name="مكتب فردي E2" data-type="مكاتب (OFF)" data-area="42 م²" data-status="متاح" x="1235.25" y="346.25" width="39.5" height="39.5"/>
+          <path class="cls-12" d="M1286.5,45.5v39h-39v-39h39m.5-.5h-40V85h40V45Z" transform="translate(-12 301)"/>
+          
+          <rect class="cls-11 unit-clickable" data-id="off_east_wing_3" data-name="مكتب تنفيذي E3" data-type="مكاتب (OFF)" data-area="64 م²" data-status="محجوز" x="1315.25" y="346.25" width="59.5" height="39.5"/>
+          <path class="cls-12" d="M1386.5,45.5v39h-59v-39h59m.5-.5h-60V85h60V45Z" transform="translate(-12 301)"/>
+          
+          <rect class="cls-11 unit-clickable" data-id="off_east_wing_4" data-name="مكتب فردي E4" data-type="مكاتب (OFF)" data-area="52 م²" data-status="متاح" x="1235.25" y="406.25" width="39.5" height="59.5"/>
+          <path class="cls-12" d="M1286.5,105.5v59h-39v-59h39m.5-.5h-40v60h40V105Z" transform="translate(-12 301)"/>
+          
+          <polygon class="cls-11 unit-clickable" data-id="off_east_wing_5" data-name="مكتب استشارات هندسية E5" data-type="مكاتب (OFF)" data-area="78 م²" data-status="مشغول" points="1275.25 484.9 1275.25 406.25 1314.75 406.25 1314.75 491.62 1309.8 519.44 1275.25 484.9"/>
+          <path class="cls-12" d="M1326.5,105.5v85.08l-4.86,27.35-34.14-34.14V105.5h39m.5-.5h-40v79l35,35,5-28.34V105Z" transform="translate(-12 301)"/>
+          
+          <rect class="cls-11 unit-clickable" data-id="off_east_wing_6" data-name="قاعة اجتماعات شرق E6" data-type="مكاتب (OFF)" data-area="92 م²" data-status="متاح" x="1315.25" y="406.25" width="59.5" height="70.5"/>
+          <path class="cls-12" d="M1386.5,105.5v70h-59v-70h59m.5-.5h-60v71h60V105Z" transform="translate(-12 301)"/>
+        </g>
+
+        <!-- طبقة الوحدات الكبيرة والتصميم الداخلي (Layer 5) -->
+        <g id="Layer_5" data-name="Layer 5">
+          <polygon class="cls-9 unit-clickable" data-id="str_stairs_w1" data-name="مطلع الدرج غرب 1" data-type="سلالم (STR)" data-area="48 م²" data-status="نشط" points="418.94 1035.64 418.94 975.22 419.19 975.45 444.25 975.45 444.25 1055 444.24 1054.99 418.94 1035.64"/>
+          <polygon class="cls-13 unit-clickable" data-id="lh_zone_w1" data-name="منور إضاءة غرب 1" data-type="منور (LH)" data-area="120 م²" data-status="خدمات" points="407.08 789.48 407.08 700.61 443.8 700.61 443.8 700.76 498.33 700.61 518.08 700.61 518.08 789.48 407.08 789.48"/>
+          <path class="cls-12" d="M529.82,399.86v88.37H419.33V399.86h36.22V400h.58l18.52-.05,18.65,0,17-.05h19.49m.5-.5h-20l-17,.05-18.64,0-18.52.05h-.08v-.15H418.83v89.37H530.32V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_block_w1_sub" data-name="امتداد منور غرب 1" data-type="منور (LH)" data-area="55 م²" data-status="خدمات" x="388.43" y="789.98" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M455.5,489.23v43.68H400.68V489.23H455.5m.5-.5H400.18v44.68H456V488.73Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_w1" data-name="مستودع غربي 1" data-type="مستودع (STG)" data-area="24 م²" data-status="محجوز" x="350.89" y="722.7" width="18.52" height="44.68"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_w1_main" data-name="ساحة إضاءة W1" data-type="منور (LH)" data-area="95 م²" data-status="خدمات" x="257.9" y="700.61" width="92.61" height="88.86"/>
+          <path class="cls-12" d="M362.26,399.86v88.37H270.15V399.86h92.11m.5-.5H269.65v89.37h93.11V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_w2" data-name="مستودع معدات W2" data-type="مستودع (STG)" data-area="18 م²" data-status="نشط" x="332.24" y="908.43" width="37.17" height="22.34"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_w2_sub" data-name="رواق إنارة W2" data-type="منور (LH)" data-area="62 م²" data-status="خدمات" x="257.9" y="789.98" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M380.91,489.23v43.68H270.15V489.23H380.91m.5-.5H269.65v44.53l.13.15H381.41V488.73Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-10 unit-clickable" data-id="wc_w1" data-name="دورة مياه الجناح الغربي 1" data-type="مرافق (WC)" data-area="46 م²" data-status="متاح" points="257.65 908.43 257.65 879.09 332.11 879.09 332.11 930.76 285.85 930.76 284.01 929.42 257.65 908.43"/>
+
+          <!-- الأقواس المعمارية والمنحنيات -->
+          <path class="cls-13 unit-clickable" data-id="curved_arc_w1" data-name="قوس معماري مظلل غرب 1" data-type="منور (LH)" data-area="80 م²" data-status="مفتوح" d="M348.91,705.64c-23-18.69-40.55-44.83-50.67-75.63h83v0l26.18,23.45Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M381.11,630.26l25.94,23.23L348.9,705.31c-22.84-18.58-40.22-44.51-50.31-75h82.52m.3-.5H297.9c10.32,31.64,28.37,57.89,51,76.21l58.88-52.48-26.39-23.64v-.09Z" transform="translate(-12 301)"/>
+          <path class="cls-13 unit-clickable" data-id="curved_arc_w2" data-name="قوس معماري مظلل غرب 2" data-type="منور (LH)" data-area="84 م²" data-status="مفتوح" d="M426.45,734.33c-27.64-.17-54.31-10-77.15-28.37l58.5-52.13,22.89,20.5v60Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M407.8,654.16l22.64,20.28V734.1l-4,0c-27.49-.17-54-9.89-76.76-28.13l58.11-51.79m0-.67L348.92,706c22.36,18.08,49.19,28.44,77.53,28.61l4.45,0,0,0V674.22L407.8,653.49Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_w3" data-name="قاعة إنارة W3" data-type="منور (LH)" data-area="72 م²" data-status="خدمات" x="257.9" y="834.66" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M380.91,533.91v43.68H270.15V533.91H380.91m.5-.5H269.65v44.68H381.41V533.41Z" transform="translate(-12 301)"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_w4" data-name="قاعة إنارة W4" data-type="منور (LH)" data-area="68 م²" data-status="خدمات" x="388.43" y="834.66" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M455.5,533.91v43.68H400.68V533.91H455.5m.5-.5H400.18v44.68H456V533.41Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-8 unit-clickable" data-id="corridor_junction_1" data-name="تقاطع ممرات قطاع 1" data-type="ممرات (COR)" data-area="190 م²" data-status="ممر حركة" points="369.54 879.09 369.54 789.73 350.89 789.73 350.89 767.38 369.54 767.38 369.54 722.7 350.89 722.7 350.89 700.36 369.54 700.36 369.54 625 388.06 625 388.06 700.36 406.7 700.36 406.7 789.73 388.06 789.73 388.06 879.09 444 879.09 444 975.45 419.19 975.45 418.94 975.21 395.8 954.49 369.41 930.86 369.41 930.76 369.54 930.76 369.54 908.43 332.24 908.43 332.24 879.09 369.54 879.09"/>
+          
+          <!-- وحدات القطاع الأوسط والشرقي (Center & East Modules) -->
+          <polygon class="cls-9 unit-clickable" data-id="str_stairs_c1" data-name="مطلع الدرج الأوسط 1" data-type="سلالم (STR)" data-area="48 م²" data-status="نشط" points="676.35 1035.64 676.35 975.22 676.61 975.45 701.66 975.45 701.66 1055 701.66 1054.99 676.35 1035.64"/>
+          <polygon class="cls-13 unit-clickable" data-id="lh_center_1" data-name="منور إضاءة أوسط 1" data-type="منور (LH)" data-area="120 م²" data-status="خدمات" points="664.5 789.48 664.5 700.61 701.21 700.61 701.21 700.76 755.74 700.61 775.49 700.61 775.49 789.48 664.5 789.48"/>
+          <path class="cls-12" d="M787.24,399.86v88.37H676.75V399.86H713V400h.59l18.52-.05,18.64,0,17-.05h19.5m.5-.5h-20l-17,.05-18.65,0-18.52.05h-.08v-.15H676.25v89.37H787.74V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_c2" data-name="منور إضاءة أوسط 2" data-type="منور (LH)" data-area="55 م²" data-status="خدمات" x="645.85" y="789.98" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M712.91,489.23v43.68H658.1V489.23h54.81m.5-.5H657.6v44.68h55.81V488.73Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_c1" data-name="مستودع أوسط C1" data-type="مستودع (STG)" data-area="24 م²" data-status="متاح" x="608.3" y="722.7" width="18.52" height="44.68"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_c3" data-name="منور إضاءة أوسط 3" data-type="منور (LH)" data-area="95 م²" data-status="خدمات" x="515.31" y="700.61" width="92.61" height="88.86"/>
+          <path class="cls-12" d="M619.67,399.86v88.37H527.56V399.86h92.11m.5-.5H527.06v89.37h93.11V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_c2" data-name="مستودع أوسط C2" data-type="مستودع (STG)" data-area="18 م²" data-status="مشغول" x="589.65" y="908.43" width="37.17" height="22.34"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_c4" data-name="منور إضاءة أوسط 4" data-type="منور (LH)" data-area="62 م²" data-status="خدمات" x="515.31" y="789.98" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M638.32,489.23v43.68H527.56V489.23H638.32m.5-.5H527.06v44.53l.14.15H638.82V488.73Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-10 unit-clickable" data-id="wc_c1" data-name="دورة مياه القطاع الأوسط" data-type="مرافق (WC)" data-area="46 م²" data-status="متاح" points="515.06 908.43 515.06 879.09 589.52 879.09 589.52 930.76 543.26 930.76 541.43 929.42 515.06 908.43"/>
+
+          <path class="cls-13 unit-clickable" data-id="curved_c1" data-name="قوس معماري أوسط 1" data-type="منور (LH)" data-area="80 م²" data-status="مفتوح" d="M606.32,705.64c-23-18.69-40.55-44.83-50.66-75.63h83v0l26.19,23.45Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M638.53,630.26l25.93,23.23-58.15,51.82c-22.83-18.58-40.22-44.51-50.31-75h82.53m.29-.5H555.31c10.33,31.64,28.37,57.89,51,76.21l58.88-52.48-26.39-23.64v-.09Z" transform="translate(-12 301)"/>
+          <path class="cls-13 unit-clickable" data-id="curved_c2" data-name="قوس معماري أوسط 2" data-type="منور (LH)" data-area="84 م²" data-status="مفتوح" d="M683.86,734.33c-27.64-.17-54.31-10-77.14-28.37l58.49-52.13,22.89,20.5v60Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M665.21,654.16l22.64,20.28V734.1l-4,0c-27.48-.17-54-9.89-76.76-28.13l58.11-51.79m0-.67L606.33,706c22.36,18.08,49.2,28.44,77.53,28.61l4.45,0,0,0V674.22l-23.14-20.73Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_c5" data-name="قاعة إنارة C5" data-type="منور (LH)" data-area="72 م²" data-status="خدمات" x="515.31" y="834.66" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M638.32,533.91v43.68H527.56V533.91H638.32m.5-.5H527.06v44.68H638.82V533.41Z" transform="translate(-12 301)"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_c6" data-name="قاعة إنارة C6" data-type="منور (LH)" data-area="68 م²" data-status="خدمات" x="645.85" y="834.66" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M712.91,533.91v43.68H658.1V533.91h54.81m.5-.5H657.6v44.68h55.81V533.41Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-8 unit-clickable" data-id="corridor_junction_2" data-name="تقاطع ممرات قطاع 2" data-type="ممرات (COR)" data-area="190 م²" data-status="ممر حركة" points="626.95 879.09 626.95 789.73 608.3 789.73 608.3 767.38 626.95 767.38 626.95 722.7 608.3 722.7 608.3 700.36 626.95 700.36 626.95 625 645.47 625 645.47 700.36 664.12 700.36 664.12 789.73 645.47 789.73 645.47 879.09 701.41 879.09 701.41 975.45 676.61 975.45 676.35 975.21 653.22 954.49 626.82 930.86 626.82 930.76 626.95 930.76 626.95 908.43 589.66 908.43 589.66 879.09 626.95 879.09"/>
+
+          <polygon class="cls-9 unit-clickable" data-id="str_stairs_e1" data-name="مطلع الدرج الشرقي 1" data-type="سلالم (STR)" data-area="48 م²" data-status="نشط" points="935.64 1035.64 935.64 975.22 935.89 975.45 960.95 975.45 960.95 1055 960.94 1054.99 935.64 1035.64"/>
+          <polygon class="cls-13 unit-clickable" data-id="lh_east_1" data-name="منور إضاءة شرقي 1" data-type="منور (LH)" data-area="120 م²" data-status="خدمات" points="905.2 789.48 905.2 700.61 941.91 700.61 941.91 700.76 996.44 700.61 1034.75 700.61 1034.75 789.48 905.2 789.48"/>
+          <path class="cls-12" d="M1046.5,399.86v88.37h-129V399.86h36.21V400h.59l18.52-.05,18.65,0,17-.05h38.06m.5-.5h-38.56l-17,.05-18.65,0-18.52.05h-.09v-.15H917v89.37h130V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_e2" data-name="منور إضاءة شرقي 2" data-type="منور (LH)" data-area="55 م²" data-status="خدمات" x="905.13" y="789.98" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M972.2,489.23v43.68H917.38V489.23H972.2m.5-.5H916.88v44.68H972.7V488.73Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_e1" data-name="مستودع شرقي E1" data-type="مستودع (STG)" data-area="24 م²" data-status="متاح" x="867.59" y="722.7" width="18.52" height="44.68"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_e3" data-name="منور إضاءة شرقي 3" data-type="منور (LH)" data-area="95 م²" data-status="خدمات" x="774.6" y="700.61" width="92.61" height="88.86"/>
+          <path class="cls-12" d="M879,399.86v88.37H786.85V399.86H879m.5-.5H786.35v89.37h93.11V399.36Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-14 unit-clickable" data-id="stg_e2" data-name="مستودع شرقي E2" data-type="مستودع (STG)" data-area="18 م²" data-status="متاح" x="848.94" y="908.43" width="37.17" height="22.34"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_e4" data-name="منور إضاءة شرقي 4" data-type="منور (LH)" data-area="62 م²" data-status="خدمات" x="774.6" y="789.98" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M897.61,489.23v43.68H786.85V489.23H897.61m.5-.5H786.35v44.53l.13.15H898.11V488.73Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-10 unit-clickable" data-id="wc_e1" data-name="دورة مياه الجناح الشرقي 1" data-type="مرافق (WC)" data-area="46 م²" data-status="متاح" points="774.35 908.43 774.35 879.09 848.81 879.09 848.81 930.76 802.55 930.76 800.71 929.42 774.35 908.43"/>
+
+          <path class="cls-13 unit-clickable" data-id="curved_e1" data-name="قوس معماري شرقي 1" data-type="منور (LH)" data-area="80 م²" data-status="مفتوح" d="M865.61,705.64c-23-18.69-40.55-44.83-50.67-75.63h83v0l26.18,23.45Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M897.81,630.26l25.94,23.23L865.6,705.31c-22.84-18.58-40.22-44.51-50.31-75h82.52m.3-.5H814.6c10.32,31.64,28.37,57.89,51,76.21l58.88-52.48-26.39-23.64v-.09Z" transform="translate(-12 301)"/>
+          <path class="cls-13 unit-clickable" data-id="curved_e2" data-name="قوس معماري شرقي 2" data-type="منور (LH)" data-area="84 م²" data-status="مفتوح" d="M943.15,734.33c-27.64-.17-54.31-10-77.15-28.37l58.5-52.13,22.89,20.5v60Z" transform="translate(-12 301)"/>
+          <path class="cls-12" d="M924.5,654.16l22.64,20.28V734.1l-4,0c-27.49-.17-54-9.89-76.76-28.13l58.11-51.79m0-.67L865.62,706c22.35,18.08,49.19,28.44,77.53,28.61l4.45,0,0,0V674.22L924.5,653.49Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-13 unit-clickable" data-id="lh_e5" data-name="قاعة إنارة E5" data-type="منور (LH)" data-area="72 م²" data-status="خدمات" x="774.6" y="834.66" width="111.26" height="44.18"/>
+          <path class="cls-12" d="M897.61,533.91v43.68H786.85V533.91H897.61m.5-.5H786.35v44.68H898.11V533.41Z" transform="translate(-12 301)"/>
+          <rect class="cls-13 unit-clickable" data-id="lh_e6" data-name="قاعة إنارة E6" data-type="منور (LH)" data-area="68 م²" data-status="خدمات" x="905.13" y="834.66" width="55.32" height="44.18"/>
+          <path class="cls-12" d="M972.2,533.91v43.68H917.38V533.91H972.2m.5-.5H916.88v44.68H972.7V533.41Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-8 unit-clickable" data-id="corridor_junction_3" data-name="تقاطع ممرات قطاع 3" data-type="ممرات (COR)" data-area="190 م²" data-status="ممر حركة" points="886.23 879.09 886.23 789.73 867.59 789.73 867.59 767.38 886.23 767.38 886.23 722.7 867.59 722.7 867.59 700.36 886.23 700.36 886.23 625 904.75 625 904.75 700.36 923.41 700.36 923.41 789.73 904.75 789.73 904.75 879.09 960.7 879.09 960.7 975.45 935.9 975.45 935.64 975.21 912.5 954.49 886.11 930.86 886.11 930.76 886.23 930.76 886.23 908.43 848.94 908.43 848.94 879.09 886.23 879.09"/>
+
+          <!-- صف المكاتب الغربية السفلية -->
+          <polygon class="cls-11 unit-clickable" data-id="off_w_corner1" data-name="مكتب ركني غرب 1" data-type="مكاتب (OFF)" data-area="54 م²" data-status="مشغول" points="0.31 789.6 0.31 743.14 30.82 743.14 44.35 757.6 44.28 789.6 0.31 789.6"/>
+          <path class="cls-12" d="M42.71,442.39h0l3.48,3.72,9.9,10.58L56,488.35H12.56v-46H42.71m.38-.5h-31v47H56.53v-.12l.07-32.22-10-10.73-3.48-3.72.09-.08-.09-.09Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-11 unit-clickable" data-id="off_w_corner2" data-name="مكتب ركني غرب 2" data-type="مكاتب (OFF)" data-area="48 م²" data-status="متاح" points="0.31 742.64 0.31 700.73 44.28 700.73 44.28 730.7 30.99 742.64 0.31 742.64"/>
+          <path class="cls-12" d="M56,400v29.61l-9.79,8.8-3.34,3H12.56V400H56m.5-.5H12.06v42.41h31l3.48-3.13,10-8.95V399.48Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-11 unit-clickable" data-id="off_w_mid1" data-name="مكتب غرب أوسط 1" data-type="مكاتب (OFF)" data-area="42 م²" data-status="متاح" points="44.78 789.48 44.78 757.76 92.86 757.76 92.99 789.48 44.78 789.48"/>
+          <path class="cls-12" d="M104.61,457l0,10,.09,21.23H57V457h47.58m.5-.5H56.53v32.22h48.71L105.15,467l0-10.49Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-11 unit-clickable" data-id="off_w_mid2" data-name="مكتب غرب أوسط 2" data-type="مكاتب (OFF)" data-area="44 م²" data-status="محجوز" points="44.78 730.56 44.78 700.73 92.99 700.73 92.86 730.56 44.78 730.56"/>
+          <path class="cls-12" d="M104.74,400l-.13,29.33H57V400h47.71m.5-.5H56.53v30.33h48.58l.13-30.33Z" transform="translate(-12 301)"/>
+
+          <polygon class="cls-9 unit-clickable" data-id="str_stairs_w_deep" data-name="درج الطوارئ الجنوبي الغربي" data-type="سلالم (STR)" data-area="36 م²" data-status="نشط" points="161.29 1035.64 161.29 975.22 161.55 975.45 186.6 975.45 186.6 1055 186.6 1054.99 161.29 1035.64"/>
+          <polygon class="cls-15 unit-clickable" data-id="cor_w_inner" data-name="ممر داخلي خلفي" data-type="ممرات (COR)" data-area="88 م²" data-status="خدمات" points="150.19 788.73 150.19 760.36 219.54 760.36 219.54 731.67 150.19 731.67 150.19 701.36 185.4 701.36 185.4 701.51 220.44 701.41 225.44 701.4 240.68 701.36 259.68 701.36 259.68 788.73 150.19 788.73"/>
+
+          <polygon class="cls-11 unit-clickable" data-id="off_w_suite_link" data-name="وحدة وصل إدارية W" data-type="مكاتب (OFF)" data-area="50 م²" data-status="متاح" points="225.69 789.44 225.69 759.11 218.79 759.11 218.79 746.26 260.34 746.26 260.43 789.48 225.69 789.44"/>
+          <path class="cls-12" d="M272.09,445.51l.08,42.72-34.23,0V457.86H231V445.51h41m.5-.5h-42v13.35h6.9v30.33l35.24,0L272.59,445Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-17 unit-clickable" data-id="lw_window_w1" data-name="نافذة إضاءة جدارية W1" data-type="إضاءة (LW)" data-area="12 م²" data-status="مفتوح" x="78.42" y="789.73" width="33.34" height="33.01"/>
+          <polygon class="cls-10 unit-clickable" data-id="wc_w_corner" data-name="دورة مياه الزاوية الغربية" data-type="مرافق (WC)" data-area="46 م²" data-status="متاح" points="0 908.43 0 879.09 74.46 879.09 74.46 930.76 28.2 930.76 26.37 929.42 0 908.43"/>
+
+          <!-- الأقواس الدائرية الطرفية -->
+          <path class="cls-11 unit-clickable" data-id="arch_fan_1" data-name="قطاع قوس دائري 1" data-type="مكاتب (OFF)" data-area="32 م²" data-status="مشغول" d="M81.93,697.35a152.55,152.55,0,0,1-19.11-22.49l70.91-32.38a57.89,57.89,0,0,0,6.49,12.18Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="arch_fan_2" data-name="قطاع قوس دائري 2" data-type="مكاتب (OFF)" data-area="32 م²" data-status="مشغول" d="M112.17,719.61a134,134,0,0,1-20.74-13.84c-3.14-2.53-6.21-5.25-9.13-8.06l58.21-42.64A51.14,51.14,0,0,0,150,665.15Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="arch_fan_3" data-name="قطاع قوس دائري 3" data-type="مكاتب (OFF)" data-area="32 م²" data-status="مشغول" d="M142.56,731.21a123.84,123.84,0,0,1-29.94-11.36l37.76-54.39a44.41,44.41,0,0,0,11,6.38Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="arch_fan_4" data-name="قطاع قوس دائري 4" data-type="مكاتب (OFF)" data-area="32 م²" data-status="مشغول" d="M168.8,734.33a117.65,117.65,0,0,1-25.76-3L161.8,672A40.44,40.44,0,0,0,173,674.64H173v59.7Z" transform="translate(-12 301)"/>
+
+          <rect class="cls-11 unit-clickable" data-id="off_w_standard1" data-name="مكتب قياسي W-11" data-type="مكاتب (OFF)" data-area="38 م²" data-status="متاح" x="186.61" y="700.57" width="38.59" height="31.84"/>
+          <rect class="cls-11 unit-clickable" data-id="off_w_standard2" data-name="مكتب قياسي W-12" data-type="مكاتب (OFF)" data-area="36 م²" data-status="متاح" x="149.08" y="700.58" width="37.02" height="31.84"/>
+          <rect class="cls-11 unit-clickable" data-id="off_w_standard3" data-name="مكتب قياسي W-13" data-type="مكاتب (OFF)" data-area="34 م²" data-status="مشغول" x="149.08" y="759.61" width="37.02" height="29.83"/>
+          <rect class="cls-11 unit-clickable" data-id="off_w_standard4" data-name="مكتب قياسي W-14" data-type="مكاتب (OFF)" data-area="35 م²" data-status="متاح" x="186.6" y="759.61" width="38.59" height="29.83"/>
+
+          <rect class="cls-17 unit-clickable" data-id="lw_window_w2" data-name="نافذة إضاءة جدارية W2" data-type="إضاءة (LW)" data-area="14 م²" data-status="مفتوح" x="78.12" y="673.09" width="33.64" height="27.28"/>
+          <rect class="cls-11 unit-clickable" data-id="off_w_mid3" data-name="مكتب شمال غرب 1" data-type="مكاتب (OFF)" data-area="30 م²" data-status="متاح" x="78.37" y="625.25" width="33.15" height="25.07"/>
+          <rect class="cls-11 unit-clickable" data-id="off_w_mid4" data-name="مكتب شمال غرب 2" data-type="مكاتب (OFF)" data-area="30 م²" data-status="متاح" x="44.72" y="625.25" width="33.15" height="25.07"/>
+        </g>
+
+        <!-- الكتل الرئيسية والوحدات الاستثمارية (Layer 4 & Layer 3) -->
+        <g id="Layer_4" data-name="Layer 4">
+          <g id="Layer_3" data-name="Layer 3">
+            <rect class="cls-19 unit-clickable" data-id="void_main_hall" data-name="بهو الفراغ المعماري المركزي" data-type="فراغ علوي (VOID)" data-area="310 م²" data-status="غير قابل للتأجير" x="442" y="545.5" width="593" height="49.5"/>
+            <path class="cls-19 unit-clickable" data-id="void_rotunda" data-name="فناء الفراغ الدائري" data-type="فراغ علوي (VOID)" data-area="220 م²" data-status="غير قابل للتأجير" d="M164,214H324a0,0,0,0,1,0,0v0a80,80,0,0,1-80,80h0a80,80,0,0,1-80-80v0A0,0,0,0,1,164,214Z" transform="translate(476 809) rotate(-180)"/>
+            <rect class="cls-19 unit-clickable" data-id="void_link" data-name="فراغ وصل شرقي" data-type="فراغ علوي (VOID)" data-area="45 م²" data-status="غير قابل للتأجير" x="1115" y="545.5" width="80" height="49.5"/>
+
+            <rect class="cls-20 unit-clickable" data-id="elv_central" data-name="مصعد الركاب الرئيسي" data-type="مصاعد (ELV)" data-area="28 م²" data-status="نشط" x="1055" y="501" width="60" height="24"/>
+            <rect class="cls-20 unit-clickable" data-id="elv_west" data-name="مصعد الخدمة الغربي" data-type="مصاعد (ELV)" data-area="24 م²" data-status="نشط" x="362" y="505" width="57" height="21"/>
+
+            <rect class="cls-10 unit-clickable" data-id="wc_central_block" data-name="مجمع دورات مياه وسط" data-type="مرافق (WC)" data-area="52 م²" data-status="متاح" x="1115" y="466" width="40" height="59"/>
+            <polygon class="cls-9 unit-clickable" data-id="str_stairs_hub" data-name="بئر سلالم الخدمات المركزي" data-type="سلالم (STR)" data-area="65 م²" data-status="نشط" points="1115 466 1035 466 1035 525 1055 525 1055 501 1115 501 1115 466"/>
+
+            <!-- مقطع الدائرة الشرقية الهيكلية -->
+            <path class="cls-19 unit-clickable" data-id="void_dome_inner" data-name="قبة الفراغ السماوي الداخلية" data-type="فراغ علوي (VOID)" data-area="380 م²" data-status="مفتوح" d="M1297.5,299.94a110,110,0,1,1,110,110A109.94,109.94,0,0,1,1297.5,299.94Z" transform="translate(-12 301)"/>
+            <path class="cls-22 unit-clickable" data-id="void_dome_outer" data-name="حلقة الفناء الدائري الخارجي" data-type="ممرات (COR)" data-area="520 م²" data-status="ممر حركة" d="M1257.5,299.94a150,150,0,1,1,150,150A149.9,149.9,0,0,1,1257.5,299.94Z" transform="translate(-12 301)"/>
+          </g>
+
+          <rect class="cls-10 unit-clickable" data-id="wc_w_executive" data-name="دورة مياه كبار الشخصيات VIP" data-type="مرافق (WC)" data-area="38 م²" data-status="متاح" x="362" y="465" width="57" height="40.04"/>
+
+          <!-- الوحدات الإدارية المميزة (الكتل الاستثمارية F) -->
+          <g class="cls-26">
+            <rect class="cls-29" x="431" y="112" width="82" height="159"/>
+          </g>
+          <rect class="cls-29 unit-clickable" data-id="unit_block_wc_east" data-name="جناح الخدمات الاستثماري E-Block" data-type="جناح استثماري" data-area="260 م²" data-status="متاح" x="431" y="112" width="82" height="159"/>
+          <path class="cls-28" d="M523-187V-32H445V-187h78m4-4H441V-28h86V-191Z" transform="translate(-12 301)"/>
+
+          <!-- وحدة F-98 -->
+          <g class="cls-26">
+            <rect class="cls-32" x="269" y="112" width="158" height="159"/>
+          </g>
+          <rect id="node_f98" class="cls-32 unit-clickable" data-id="unit_f98" data-name="الجناح الإداري F-98" data-type="مكتب تنفيذي رئيسي" data-area="450 م²" data-status="محجوز" x="269" y="112" width="158" height="159"/>
+          <path class="cls-28" d="M437-187V-32H283V-187H437m4-4H279V-28H441V-191Z" transform="translate(-12 301)"/>
+          <text class="cls-25" transform="translate(297.6 169.54)" style="pointer-events:none; font-size:18px;">F-98</text>
+
+          <!-- وحدة الجناح الغربي F -->
+          <g class="cls-26">
+            <rect class="cls-33" x="107" y="112" width="158" height="159"/>
+          </g>
+          <rect class="cls-33 unit-clickable" data-id="unit_f_west" data-name="الجناح الإداري الغربي F-West" data-type="قاعة مؤتمرات ومكاتب" data-area="450 م²" data-status="متاح" x="107" y="112" width="158" height="159"/>
+          <path class="cls-28" d="M275-187V-32H121V-187H275m4-4H117V-28H279V-191Z" transform="translate(-12 301)"/>
+
+          <!-- الجناح الجنوبي الشرقي الدائري (Curved Radial Offices) -->
+          <path class="cls-34 unit-clickable" data-id="sector_east_wing_edge" data-name="الواجهة الجنوبية الشرقية الكبرى" data-type="مكاتب (OFF)" data-area="850 م²" data-status="تحت التطوير" d="M2149.5-6v-.06a139.67,139.67,0,0,0-7.09-44.09A140,140,0,0,0,2010-146V-301c130.23.22,240.68,84.84,279.56,202.09A294.45,294.45,0,0,1,2304.5-6Z" transform="translate(-12 301)"/>
+          <rect class="cls-35 unit-clickable" data-id="storage_hub_east" data-name="مركز التوزيع واللوجستيات الشرقي" data-type="مستودع (STG)" data-area="520 م²" data-status="مشغول" x="1800" width="198" height="155"/>
+
+          <!-- قطاعات المكاتب الدائرية الشرقية -->
+          <path class="cls-11 unit-clickable" data-id="radial_off_1" data-name="مكتب شعاعي R-01" data-type="مكاتب (OFF)" data-area="62 م²" data-status="متاح" d="M1407.25,35.24q0-15.33.07-30.67A326.62,326.62,0,0,1,1517.7,25.93l-11.51,28.44A296.35,296.35,0,0,0,1407.25,35.24Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="radial_off_2" data-name="مكتب شعاعي R-02" data-type="مكاتب (OFF)" data-area="64 م²" data-status="مشغول" d="M1467.43,96.86q5.86-19.68,11.74-39.35a293.22,293.22,0,0,1,66.14,30.62l-22.46,34.37A253.42,253.42,0,0,0,1467.43,96.86Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="radial_off_3" data-name="مكتب شعاعي R-03" data-type="مكاتب (OFF)" data-area="58 م²" data-status="متاح" d="M1502.83,65.32q8-19.47,15.94-39a374.92,374.92,0,0,1,49.82,26.14l-23,35.24A252.43,252.43,0,0,0,1502.83,65.32Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="radial_off_4" data-name="مكتب شعاعي R-04" data-type="مكاتب (OFF)" data-area="60 م²" data-status="محجوز" d="M1546.38,88.28l23.16-35.15a375.75,375.75,0,0,1,40.43,32l-28.91,30.59A343.34,343.34,0,0,0,1546.38,88.28Z" transform="translate(-12 301)"/>
+          <path class="cls-17 unit-clickable" data-id="radial_lw_1" data-name="منور إضاءة شعاعي R-LW1" data-type="إضاءة (LW)" data-area="36 م²" data-status="مفتوح" d="M1583.9,118.76l-29,29.71a213.07,213.07,0,0,0-31.82-25.55q11.39-17.37,22.78-34.72A255.39,255.39,0,0,1,1583.9,118.76Z" transform="translate(-12 301)"/>
+          <path class="cls-11 unit-clickable" data-id="radial_off_5" data-name="مكتب شعاعي R-05" data-type="مكاتب (OFF)" data-area="70 م²" data-status="متاح" d="M1449.91,155.55q5.86-19.68,11.74-39.34a215.34,215.34,0,0,1,79,46.27l-28.62,29.43A170.82,170.82,0,0,0,1449.91,155.55Z" transform="translate(-12 301)"/>
+
+          <!-- مقياس الرسم ودليل الألوان (Legend UI) -->
+          <rect class="cls-24" x="551" y="203" width="121" height="55" rx="4"/>
+          <path class="cls-23" d="M569.9-93v33h30V-93Z" transform="translate(-12 301)"/>
+          <text class="cls-25" transform="translate(565.49 252.24)">3M</text>
+          <rect class="cls-23" x="596" y="208" width="20" height="33"/>
+          <text class="cls-25" transform="translate(598.36 251.79)">2M</text>
+          <rect class="cls-23" x="624" y="208" width="10" height="33"/>
+          <text class="cls-25" transform="translate(621.36 251.79)">1M</text>
+          <rect class="cls-23" x="654" y="208" width="5" height="33"/>
+          <text class="cls-25" transform="translate(644.26 251.79)">1/2M</text>
+
+          <rect class="cls-24" x="679" y="203" width="336" height="55" rx="4"/>
+          <rect class="cls-10" x="690" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(696.34 234.13)">WC</text>
+          <rect class="cls-20" x="725" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(731.42 234.73)">ELV</text>
+          <rect class="cls-9" x="760" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(765.42 234.73)">STR</text>
+          <rect class="cls-14" x="795" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(800.53 234.73)">STG</text>
+          <rect class="cls-11" x="830" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(836.27 234.39)">OFF</text>
+          <rect class="cls-13" x="865" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(874.58 234.73)">LH</text>
+          <rect class="cls-8" x="900" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(905.58 234.73)">COR</text>
+          <rect class="cls-19" x="935" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(938.55 235.15)">VOID</text>
+          <rect class="cls-17" x="970" y="215" width="30" height="30"/>
+          <text class="cls-25" transform="translate(977.8 235.15)">LW</text>
+        </g>
+      </svg>
+    </div>
+
+    <!-- أزرار التحكم بالتقريب -->
+    <div class="zoom-controls">
+      <button class="btn-ctrl" id="zoom-in" title="تكبير">+</button>
+      <button class="btn-ctrl" id="zoom-out" title="تصغير">-</button>
+      <button class="btn-ctrl" id="zoom-reset" title="إعادة ضبط">⟲</button>
+    </div>
+  </div>
+
+  <!-- القائمة الجانبية لمعلومات العناصر المحددة -->
+  <aside class="sidebar">
+    <div>
+      <h2>مستكشف المخطط</h2>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">انقر على أي وحدة أو غرفة لعرض تفاصيلها</p>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="بحث باسم الوحدة (مثل: F-98, مكتب)...">
+    </div>
+
+    <div class="selected-info" id="infoPanel">
+      <span class="info-badge" id="infoType">مكتب تنفيذي رئيسي</span>
+      <h3 id="infoName" style="font-size: 1.15rem; color:#fff;">الجناح الإداري F-98</h3>
+      
+      <div class="info-detail">
+        <span>المعرف البرمجي:</span>
+        <span id="infoId">unit_f98</span>
+      </div>
+      <div class="info-detail">
+        <span>المساحة المقدرة:</span>
+        <span id="infoArea">450 م²</span>
+      </div>
+      <div class="info-detail">
+        <span>الحالة الراهنة:</span>
+        <span id="infoStatus" style="color:var(--accent-orange);">محجوز</span>
+      </div>
+      <div class="info-detail">
+        <span>نظام التكييف:</span>
+        <span>مركزي منفصل (Zone A)</span>
+      </div>
+    </div>
+  </aside>
+
+  <script>
+    // التحكم بالتحريك والتكبير (Pan & Zoom)
+    const viewport = document.getElementById('viewport');
+    const wrapper = document.getElementById('map-wrapper');
+    let scale = 0.55;
+    let pointX = 60;
+    let pointY = 40;
+    let isPanning = false;
+    let startX = 0;
+    let startY = 0;
+
+    function setTransform() {
+      wrapper.style.transform = `translate(${pointX}px, ${pointY}px) scale(${scale})`;
+    }
+
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.unit-clickable')) return;
+      isPanning = true;
+      startX = e.clientX - pointX;
+      startY = e.clientY - pointY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      pointX = e.clientX - startX;
+      pointY = e.clientY - startY;
+      setTransform();
+    });
+
+    window.addEventListener('mouseup', () => { isPanning = false; });
+
+    viewport.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const xs = (e.clientX - pointX) / scale;
+      const ys = (e.clientY - pointY) / scale;
+      const delta = -e.deltaY;
+      (delta > 0) ? (scale *= 1.12) : (scale /= 1.12);
+      scale = Math.min(Math.max(0.2, scale), 3);
+      pointX = e.clientX - xs * scale;
+      pointY = e.clientY - ys * scale;
+      setTransform();
+    });
+
+    document.getElementById('zoom-in').addEventListener('click', () => {
+      scale = Math.min(scale * 1.25, 3);
+      setTransform();
+    });
+
+    document.getElementById('zoom-out').addEventListener('click', () => {
+      scale = Math.max(scale / 1.25, 0.2);
+      setTransform();
+    });
+
+    document.getElementById('zoom-reset').addEventListener('click', () => {
+      scale = 0.55;
+      pointX = 60;
+      pointY = 40;
+      setTransform();
+    });
+
+    // إدارة تفاعل الوحدات وعرض المعلومات
+    const units = document.querySelectorAll('.unit-clickable');
+    const infoName = document.getElementById('infoName');
+    const infoType = document.getElementById('infoType');
+    const infoId = document.getElementById('infoId');
+    const infoArea = document.getElementById('infoArea');
+    const infoStatus = document.getElementById('infoStatus');
+    let selectedElement = null;
+
+    units.forEach(unit => {
+      unit.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        if (selectedElement) {
+          selectedElement.classList.remove('selected-active');
+        }
+
+        selectedElement = unit;
+        unit.classList.add('selected-active');
+
+        // تحديث لوحة المعلومات
+        infoName.textContent = unit.getAttribute('data-name') || 'وحدة غير مسماة';
+        infoType.textContent = unit.getAttribute('data-type') || 'مرافق عامة';
+        infoId.textContent = unit.getAttribute('data-id') || 'N/A';
+        infoArea.textContent = unit.getAttribute('data-area') || 'غير محدد';
+        
+        const status = unit.getAttribute('data-status') || 'متاح';
+        infoStatus.textContent = status;
+        infoStatus.style.color = (status === 'محجوز' || status === 'مشغول') ? '#e59853' : '#74d2e8';
+      });
+    });
+
+    // ميزة البحث والتظليل المباشر
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const term = e.target.value.trim().toLowerCase();
+      if (!term) return;
+
+      units.forEach(unit => {
+        const name = (unit.getAttribute('data-name') || '').toLowerCase();
+        const id = (unit.getAttribute('data-id') || '').toLowerCase();
+
+        if (name.includes(term) || id.includes(term)) {
+          if (selectedElement) selectedElement.classList.remove('selected-active');
+          selectedElement = unit;
+          unit.classList.add('selected-active');
+          unit.dispatchEvent(new Event('click'));
+        }
+      });
+    });
+
+    // التهيئة الابتدائية
+    setTransform();
+  </script>
+</body>
+</html>

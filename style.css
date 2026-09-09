@@ -1,0 +1,34 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    display: flex;
+    height: 100vh; /* ملء الشاشة بالكامل */
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #f8f9fa;
+    padding: 20px;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 1000; /* لتبقى فوق الخريطة إن لزم الأمر */
+}
+
+.sidebar h2 {
+    font-size: 20px;
+    color: #333;
+}
+
+.sidebar label {
+    font-size: 16px;
+    cursor: pointer;
+    display: block;
+    margin-bottom: 10px;
+}
+
+#map {
+    flex-grow: 1; /* الخريطة تأخذ باقي مساحة الشاشة */
+}
